@@ -475,7 +475,7 @@ def generate_plan(user_input: str):
         # Stage 6: Alternative Strategies
         with show_loading_message("🔄 Generating alternative strategies..."):
             alternatives = planner.generate_alternatives(
-                plan_data,
+                st.session_state.plan_data,
                 st.session_state.constraint_data
             )
             st.session_state.alternatives = alternatives
@@ -554,10 +554,17 @@ def main():
     
     # Process input
     if analyze_button and user_input.strip():
-        st.session_state.current_stage = "processing"
-        st.session_state.current_user_input = user_input.strip()
-        process_user_input(user_input.strip())
-        st.rerun()
+        try:
+            st.session_state.current_stage = "processing"
+            st.session_state.current_user_input = user_input.strip()
+            process_user_input(user_input.strip())
+            st.rerun()
+        except Exception as e:
+            st.error(f"❌ Error during analysis: {str(e)}")
+            st.exception(e)  # Show full traceback
+            st.session_state.current_stage = "input"
+    elif analyze_button and not user_input.strip():
+        st.warning("⚠️ Please enter your goal before clicking Analyze")
     
     st.divider()
     
