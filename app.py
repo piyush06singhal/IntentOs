@@ -114,17 +114,24 @@ st.markdown("""
     }
     
     .stTextArea>div>div>textarea {
-        background-color: white;
-        border: 2px solid #e2e8f0;
+        background-color: #ffffff;
+        border: 3px solid #667eea;
         border-radius: 10px;
         padding: 1rem;
+        font-size: 1.1rem;
+        transition: all 0.3s ease;
+        color: #1e293b;
+    }
+    
+    .stTextArea>div>div>textarea::placeholder {
+        color: #94a3b8;
         font-size: 1rem;
-        transition: border-color 0.3s ease;
     }
     
     .stTextArea>div>div>textarea:focus {
-        border-color: #667eea;
-        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        border-color: #764ba2;
+        box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.2);
+        background-color: #fefefe;
     }
     
     h1 {
@@ -531,16 +538,18 @@ def main():
         st.divider()
     
     # Input section
-    st.markdown("### What do you want to achieve?")
-    st.caption("You don't need to be clear. IntentOS will help you figure it out.")
+    st.markdown("### 💭 What do you want to achieve?")
+    st.caption("Type your goal below. You don't need to be clear - IntentOS will help you figure it out.")
     
     default_input = st.session_state.pop("example_input", "")
     user_input = st.text_area(
         "Describe your goal:",
         value=default_input,
-        height=120,
-        placeholder="Example: I want to learn machine learning but I'm not sure where to start...",
-        label_visibility="collapsed"
+        height=150,
+        placeholder="Click here and type your goal...\n\nExample: I want to learn machine learning but I'm not sure where to start and I only have 10 hours per week.",
+        label_visibility="collapsed",
+        key="user_goal_input",
+        help="Describe what you want to achieve. Be as detailed or vague as you like!"
     )
     
     col1, col2, col3 = st.columns([1, 1, 4])
@@ -553,18 +562,20 @@ def main():
             st.rerun()
     
     # Process input
-    if analyze_button and user_input.strip():
-        try:
-            st.session_state.current_stage = "processing"
-            st.session_state.current_user_input = user_input.strip()
-            process_user_input(user_input.strip())
-            st.rerun()
-        except Exception as e:
-            st.error(f"❌ Error during analysis: {str(e)}")
-            st.exception(e)  # Show full traceback
-            st.session_state.current_stage = "input"
-    elif analyze_button and not user_input.strip():
-        st.warning("⚠️ Please enter your goal before clicking Analyze")
+    if analyze_button:
+        if user_input and user_input.strip():
+            try:
+                st.session_state.current_stage = "processing"
+                st.session_state.current_user_input = user_input.strip()
+                process_user_input(user_input.strip())
+                st.rerun()
+            except Exception as e:
+                st.error(f"❌ Error during analysis: {str(e)}")
+                st.exception(e)  # Show full traceback
+                st.session_state.current_stage = "input"
+        else:
+            st.warning("⚠️ Please enter your goal in the text box above before clicking Analyze")
+            st.info(f"Debug: Input received: '{user_input}' (length: {len(user_input) if user_input else 0})")
     
     st.divider()
     
