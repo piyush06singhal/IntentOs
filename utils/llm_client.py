@@ -1,7 +1,6 @@
 """LLM client abstraction layer for easy model swapping."""
 import json
 from typing import Dict, Any, Optional
-from openai import OpenAI
 from config.settings import settings
 
 class LLMClient:
@@ -9,10 +8,18 @@ class LLMClient:
     
     def __init__(self):
         """Initialize the LLM client."""
-        self.client = OpenAI(api_key=settings.OPENAI_API_KEY)
+        self.provider = settings.LLM_PROVIDER
         self.model = settings.MODEL_NAME
         self.temperature = settings.TEMPERATURE
         self.max_tokens = settings.MAX_TOKENS
+        
+        if self.provider == "openai":
+            from openai import OpenAI
+            self.client = OpenAI(api_key=settings.OPENAI_API_KEY)
+        elif self.provider == "gemini":
+            import google.generativeai as genai
+            genai.configure(api_key=settings.GEMINI_API_KEY)
+            self.client = genai.GenerativeModel(self.model)
     
     def generate(
         self,
@@ -35,23 +42,42 @@ class LLMClient:
         Returns:
             Generated text response
         """
-        messages = [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt}
-        ]
+        if self.provider == "openai":
+            messages = [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ]
+            
+            kwargs = {
+                "model": self.model,
+                "messages": messages,
+                "temperature": temperature or self.temperature,
+                "max_tokens": max_tokens or self.max_tokens
+            }
+            
+            if response_format == "json_object":
+                kwargs["response_format"] = {"type": "json_object"}
+            
+            response = self.client.chat.completions.create(**kwargs)
+            return response.choices[0].message.content
         
-        kwargs = {
-            "model": self.model,
-            "messages": messages,
-            "temperature": temperature or self.temperature,
-            "max_tokens": max_tokens or self.max_tokens
-        }
-        
-        if response_format == "json_object":
-            kwargs["response_format"] = {"type": "json_object"}
-        
-        response = self.client.chat.completions.create(**kwargs)
-        return response.choices[0].message.content
+        elif self.provider == "gemini":
+            # Combine system and user prompts for Gemini
+            combined_prompt = f"{system_prompt}\n\n{user_prompt}"
+            
+            if response_format == "json_object":
+                combined_prompt += "\n\nIMPORTANT: Return ONLY valid JSON, no additional text."
+            
+            generation_config = {
+                "temperature": temperature or self.temperature,
+                "max_output_tokens": max_tokens or self.max_tokens,
+            }
+            
+            response = self.client.generate_content(
+                combined_prompt,
+                generation_config=generation_config
+            )
+            return response.text
     
     def generate_json(
         self,
