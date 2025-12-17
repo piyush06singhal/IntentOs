@@ -9,6 +9,7 @@ Transform ambiguous ideas into clear, actionable plans with the power of AI.
 
 ## 🌟 Features
 
+### Core Features
 - **🎯 Intent Extraction**: Automatically understand what you want to achieve, even from vague descriptions
 - **⚙️ Constraint Analysis**: Identify time, budget, skill, and resource constraints
 - **❓ Smart Clarifications**: Ask intelligent questions to fill in the gaps
@@ -17,6 +18,15 @@ Transform ambiguous ideas into clear, actionable plans with the power of AI.
 - **📊 Visual Analytics**: Interactive charts and progress tracking
 - **💾 Session Management**: Save and load your analysis sessions
 - **📤 Export Options**: Download plans as JSON or Markdown
+
+### 🚀 Advanced Features (Elite AI Capabilities)
+- **🎯 Multi-Intent Resolution**: Detects multiple goals and resolves conflicts intelligently
+- **📊 Confidence Engine**: Asks questions only when needed, prevents over-questioning
+- **⚖️ Plan Optimization**: Generates and scores multiple plans, selects the optimal one
+- **🧠 Intent Memory**: Remembers your goals across sessions, detects intent drift
+- **🛡️ Guardrail Validation**: Prevents hallucinations and contradictions, auto-corrects issues
+
+[See detailed documentation →](ADVANCED_FEATURES.md)
 
 ## 🚀 Quick Start
 

@@ -255,7 +255,7 @@ def initialize_session_state():
     if "validation_results" not in st.session_state:
         st.session_state.validation_results = None
     if "enable_advanced_features" not in st.session_state:
-        st.session_state.enable_advanced_features = True
+        st.session_state.enable_advanced_features = False  # Disabled by default for stability
 
 def load_saved_session(filename: str):
     """Load a saved session into the current state."""
@@ -290,9 +290,13 @@ def process_user_input(user_input: str):
     try:
         # Advanced Stage 1: Multi-Intent Detection
         if st.session_state.enable_advanced_features:
-            with show_loading_message("🎯 Detecting multiple intents..."):
-                multi_intent_data = multi_intent_resolver.detect_multiple_intents(user_input)
-                st.session_state.multi_intent_data = multi_intent_data
+            try:
+                with show_loading_message("🎯 Detecting multiple intents..."):
+                    multi_intent_data = multi_intent_resolver.detect_multiple_intents(user_input)
+                    st.session_state.multi_intent_data = multi_intent_data
+            except Exception as e:
+                st.warning(f"Multi-intent detection skipped: {str(e)}")
+                st.session_state.multi_intent_data = None
         
         # Stage 2: Intent Extraction
         with show_loading_message("🔍 Analyzing your intent..."):
@@ -306,17 +310,25 @@ def process_user_input(user_input: str):
         
         # Advanced Stage 4: Confidence Assessment
         if st.session_state.enable_advanced_features:
-            with show_loading_message("📊 Assessing confidence..."):
-                confidence_assessment = confidence_engine.assess_confidence(
-                    user_input, intent_data, constraint_data
-                )
-                st.session_state.confidence_assessment = confidence_assessment
+            try:
+                with show_loading_message("📊 Assessing confidence..."):
+                    confidence_assessment = confidence_engine.assess_confidence(
+                        user_input, intent_data, constraint_data
+                    )
+                    st.session_state.confidence_assessment = confidence_assessment
+            except Exception as e:
+                st.warning(f"Confidence assessment skipped: {str(e)}")
+                st.session_state.confidence_assessment = None
         
         # Advanced Stage 5: Intent Drift Detection
         if st.session_state.enable_advanced_features and st.session_state.use_memory:
-            with show_loading_message("🔄 Checking intent drift..."):
-                drift_analysis = intent_memory.detect_drift(intent_data)
-                st.session_state.drift_analysis = drift_analysis
+            try:
+                with show_loading_message("🔄 Checking intent drift..."):
+                    drift_analysis = intent_memory.detect_drift(intent_data)
+                    st.session_state.drift_analysis = drift_analysis
+            except Exception as e:
+                st.warning(f"Drift detection skipped: {str(e)}")
+                st.session_state.drift_analysis = None
         
         # Advanced Stage 6: Conflict Resolution (if multiple intents)
         if (st.session_state.enable_advanced_features and 
@@ -325,12 +337,16 @@ def process_user_input(user_input: str):
             
             conflicts = st.session_state.multi_intent_data.get("conflicts", [])
             if conflicts:
-                with show_loading_message("🔧 Resolving conflicts..."):
-                    intents = st.session_state.multi_intent_data.get("intents", [])
-                    resolution = multi_intent_resolver.resolve_conflicts(
-                        intents, conflicts, constraint_data
-                    )
-                    st.session_state.conflict_resolution = resolution
+                try:
+                    with show_loading_message("🔧 Resolving conflicts..."):
+                        intents = st.session_state.multi_intent_data.get("intents", [])
+                        resolution = multi_intent_resolver.resolve_conflicts(
+                            intents, conflicts, constraint_data
+                        )
+                        st.session_state.conflict_resolution = resolution
+                except Exception as e:
+                    st.warning(f"Conflict resolution skipped: {str(e)}")
+                    st.session_state.conflict_resolution = None
         
         # Stage 7: Smart Clarification (confidence-driven)
         should_clarify = False
@@ -380,40 +396,52 @@ def generate_plan(user_input: str):
     try:
         # Advanced Stage 8: Multi-Plan Generation & Optimization
         if st.session_state.enable_advanced_features:
-            with show_loading_message("📋 Generating multiple plan options..."):
-                multiple_plans_data = plan_optimizer.generate_multiple_plans(
-                    user_input,
-                    st.session_state.intent_data,
-                    st.session_state.constraint_data,
-                    num_plans=3
-                )
-                st.session_state.multiple_plans = multiple_plans_data.get("plans", [])
-            
-            with show_loading_message("⚖️ Scoring and optimizing plans..."):
-                scored_plans_data = plan_optimizer.score_plans(
-                    st.session_state.multiple_plans,
-                    st.session_state.constraint_data
-                )
-                st.session_state.scored_plans = scored_plans_data.get("scored_plans", [])
+            try:
+                with show_loading_message("📋 Generating multiple plan options..."):
+                    multiple_plans_data = plan_optimizer.generate_multiple_plans(
+                        user_input,
+                        st.session_state.intent_data,
+                        st.session_state.constraint_data,
+                        num_plans=3
+                    )
+                    st.session_state.multiple_plans = multiple_plans_data.get("plans", [])
                 
-                # Select optimal plan
-                optimal_plan_id = scored_plans_data.get("optimal_plan_id")
-                optimal_plan = next(
-                    (p for p in st.session_state.multiple_plans if p.get("plan_id") == optimal_plan_id),
-                    st.session_state.multiple_plans[0] if st.session_state.multiple_plans else {}
-                )
-                
-                # Convert optimal plan to standard format
-                st.session_state.plan_data = {
-                    "plan": optimal_plan.get("steps", []),
-                    "total_estimated_time": optimal_plan.get("total_time", "Unknown"),
-                    "total_cost": optimal_plan.get("total_cost", "N/A"),
-                    "strategy": optimal_plan.get("strategy", "balanced"),
-                    "success_probability": optimal_plan.get("success_probability", 0.8),
-                    "critical_path": [],
-                    "risks": [d for d in optimal_plan.get("key_disadvantages", [])],
-                    "success_metrics": [a for a in optimal_plan.get("key_advantages", [])]
-                }
+                with show_loading_message("⚖️ Scoring and optimizing plans..."):
+                    scored_plans_data = plan_optimizer.score_plans(
+                        st.session_state.multiple_plans,
+                        st.session_state.constraint_data
+                    )
+                    st.session_state.scored_plans = scored_plans_data.get("scored_plans", [])
+                    
+                    # Select optimal plan
+                    optimal_plan_id = scored_plans_data.get("optimal_plan_id")
+                    optimal_plan = next(
+                        (p for p in st.session_state.multiple_plans if p.get("plan_id") == optimal_plan_id),
+                        st.session_state.multiple_plans[0] if st.session_state.multiple_plans else {}
+                    )
+                    
+                    # Convert optimal plan to standard format
+                    st.session_state.plan_data = {
+                        "plan": optimal_plan.get("steps", []),
+                        "total_estimated_time": optimal_plan.get("total_time", "Unknown"),
+                        "total_cost": optimal_plan.get("total_cost", "N/A"),
+                        "strategy": optimal_plan.get("strategy", "balanced"),
+                        "success_probability": optimal_plan.get("success_probability", 0.8),
+                        "critical_path": [],
+                        "risks": [d for d in optimal_plan.get("key_disadvantages", [])],
+                        "success_metrics": [a for a in optimal_plan.get("key_advantages", [])]
+                    }
+            except Exception as e:
+                st.warning(f"Advanced plan optimization failed, using standard planning: {str(e)}")
+                # Fallback to standard planning
+                with show_loading_message("📋 Creating your action plan..."):
+                    plan_data = planner.generate_plan(
+                        user_input,
+                        st.session_state.intent_data,
+                        st.session_state.constraint_data,
+                        st.session_state.clarification_responses
+                    )
+                    st.session_state.plan_data = plan_data
         else:
             # Standard plan generation
             with show_loading_message("📋 Creating your action plan..."):
@@ -427,18 +455,22 @@ def generate_plan(user_input: str):
         
         # Advanced Stage 9: Guardrail Validation
         if st.session_state.enable_advanced_features:
-            with show_loading_message("🛡️ Validating plan..."):
-                validation, corrected_plan = guardrail_validator.validate_and_correct(
-                    user_input,
-                    st.session_state.constraint_data,
-                    st.session_state.plan_data,
-                    auto_correct=True
-                )
-                st.session_state.validation_results = validation
-                
-                # Use corrected plan if corrections were made
-                if validation.get("was_corrected"):
-                    st.session_state.plan_data = corrected_plan
+            try:
+                with show_loading_message("🛡️ Validating plan..."):
+                    validation, corrected_plan = guardrail_validator.validate_and_correct(
+                        user_input,
+                        st.session_state.constraint_data,
+                        st.session_state.plan_data,
+                        auto_correct=True
+                    )
+                    st.session_state.validation_results = validation
+                    
+                    # Use corrected plan if corrections were made
+                    if validation.get("was_corrected"):
+                        st.session_state.plan_data = corrected_plan
+            except Exception as e:
+                st.warning(f"Validation skipped: {str(e)}")
+                st.session_state.validation_results = None
         
         # Stage 6: Alternative Strategies
         with show_loading_message("🔄 Generating alternative strategies..."):

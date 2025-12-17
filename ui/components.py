@@ -33,11 +33,14 @@ def render_sidebar():
         
         # Advanced features toggle
         enable_advanced = st.toggle(
-            "🚀 Advanced Features",
-            value=st.session_state.get("enable_advanced_features", True),
-            help="Enable multi-intent, confidence engine, plan optimization, memory, and validation"
+            "🚀 Advanced Features (Beta)",
+            value=st.session_state.get("enable_advanced_features", False),
+            help="Enable multi-intent, confidence engine, plan optimization, memory, and validation. May increase processing time."
         )
         st.session_state.enable_advanced_features = enable_advanced
+        
+        if enable_advanced:
+            st.caption("⚡ Advanced mode: +20-30s processing time")
         
         # Session memory toggle
         use_memory = st.toggle(
