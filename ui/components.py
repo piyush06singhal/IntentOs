@@ -31,6 +31,14 @@ def render_sidebar():
         # Settings
         st.markdown("### ⚙️ Settings")
         
+        # Advanced features toggle
+        enable_advanced = st.toggle(
+            "🚀 Advanced Features",
+            value=st.session_state.get("enable_advanced_features", True),
+            help="Enable multi-intent, confidence engine, plan optimization, memory, and validation"
+        )
+        st.session_state.enable_advanced_features = enable_advanced
+        
         # Session memory toggle
         use_memory = st.toggle(
             "Session Memory",

@@ -11,6 +11,13 @@ from engine.constraint_parser import constraint_parser
 from engine.ambiguity_detector import ambiguity_detector
 from engine.planner import planner
 
+# Import advanced engine components
+from engine.multi_intent_resolver import multi_intent_resolver
+from engine.confidence_engine import confidence_engine
+from engine.plan_optimizer import plan_optimizer
+from engine.intent_memory import intent_memory
+from engine.guardrail_validator import guardrail_validator
+
 # Import UI components
 from ui.components import (
     render_sidebar,
@@ -41,6 +48,17 @@ from ui.landing import (
     render_example_prompts,
     render_how_it_works,
     render_stats_banner
+)
+
+# Import advanced features UI
+from ui.advanced_features_ui import (
+    render_multi_intent_analysis,
+    render_conflict_resolution,
+    render_confidence_dashboard,
+    render_plan_comparison,
+    render_intent_history,
+    render_drift_analysis,
+    render_validation_results
 )
 
 # Import configuration
@@ -220,6 +238,24 @@ def initialize_session_state():
         st.session_state.completed_steps = set()
     if "current_user_input" not in st.session_state:
         st.session_state.current_user_input = ""
+    
+    # Advanced features state
+    if "multi_intent_data" not in st.session_state:
+        st.session_state.multi_intent_data = None
+    if "conflict_resolution" not in st.session_state:
+        st.session_state.conflict_resolution = None
+    if "confidence_assessment" not in st.session_state:
+        st.session_state.confidence_assessment = None
+    if "multiple_plans" not in st.session_state:
+        st.session_state.multiple_plans = []
+    if "scored_plans" not in st.session_state:
+        st.session_state.scored_plans = []
+    if "drift_analysis" not in st.session_state:
+        st.session_state.drift_analysis = None
+    if "validation_results" not in st.session_state:
+        st.session_state.validation_results = None
+    if "enable_advanced_features" not in st.session_state:
+        st.session_state.enable_advanced_features = True
 
 def load_saved_session(filename: str):
     """Load a saved session into the current state."""
@@ -239,44 +275,93 @@ def load_saved_session(filename: str):
 
 def process_user_input(user_input: str):
     """
-    Process user input through the multi-stage reasoning pipeline.
+    Process user input through the enhanced multi-stage reasoning pipeline.
     
     Pipeline stages:
-    1. Intent Extraction
-    2. Constraint Parsing
-    3. Ambiguity Detection
-    4. Clarification (if needed)
-    5. Action Plan Generation
-    6. Alternative Strategies
+    1. Multi-Intent Detection & Conflict Resolution
+    2. Intent Extraction
+    3. Constraint Parsing
+    4. Confidence Assessment
+    5. Intent Drift Detection (if history exists)
+    6. Smart Clarification (confidence-driven)
+    7. Multi-Plan Generation & Optimization
+    8. Guardrail Validation
     """
     try:
-        # Stage 1: Intent Extraction
+        # Advanced Stage 1: Multi-Intent Detection
+        if st.session_state.enable_advanced_features:
+            with show_loading_message("🎯 Detecting multiple intents..."):
+                multi_intent_data = multi_intent_resolver.detect_multiple_intents(user_input)
+                st.session_state.multi_intent_data = multi_intent_data
+        
+        # Stage 2: Intent Extraction
         with show_loading_message("🔍 Analyzing your intent..."):
             intent_data = intent_engine.extract_intent(user_input)
             st.session_state.intent_data = intent_data
         
-        # Stage 2: Constraint Parsing
+        # Stage 3: Constraint Parsing
         with show_loading_message("⚙️ Extracting constraints..."):
             constraint_data = constraint_parser.extract_constraints(user_input)
             st.session_state.constraint_data = constraint_data
         
-        # Stage 3: Ambiguity Detection
-        with show_loading_message("🔎 Checking for ambiguities..."):
+        # Advanced Stage 4: Confidence Assessment
+        if st.session_state.enable_advanced_features:
+            with show_loading_message("📊 Assessing confidence..."):
+                confidence_assessment = confidence_engine.assess_confidence(
+                    user_input, intent_data, constraint_data
+                )
+                st.session_state.confidence_assessment = confidence_assessment
+        
+        # Advanced Stage 5: Intent Drift Detection
+        if st.session_state.enable_advanced_features and st.session_state.use_memory:
+            with show_loading_message("🔄 Checking intent drift..."):
+                drift_analysis = intent_memory.detect_drift(intent_data)
+                st.session_state.drift_analysis = drift_analysis
+        
+        # Advanced Stage 6: Conflict Resolution (if multiple intents)
+        if (st.session_state.enable_advanced_features and 
+            st.session_state.multi_intent_data and 
+            st.session_state.multi_intent_data.get("has_multiple_intents")):
+            
+            conflicts = st.session_state.multi_intent_data.get("conflicts", [])
+            if conflicts:
+                with show_loading_message("🔧 Resolving conflicts..."):
+                    intents = st.session_state.multi_intent_data.get("intents", [])
+                    resolution = multi_intent_resolver.resolve_conflicts(
+                        intents, conflicts, constraint_data
+                    )
+                    st.session_state.conflict_resolution = resolution
+        
+        # Stage 7: Smart Clarification (confidence-driven)
+        should_clarify = False
+        
+        if st.session_state.enable_advanced_features and st.session_state.confidence_assessment:
+            should_clarify = confidence_engine.should_ask_clarifications(
+                st.session_state.confidence_assessment
+            )
+        else:
+            # Fallback to original ambiguity detection
             ambiguity_data = ambiguity_detector.detect_ambiguity(
-                user_input,
-                intent_data,
-                constraint_data
+                user_input, intent_data, constraint_data
             )
             st.session_state.ambiguity_data = ambiguity_data
+            should_clarify = ambiguity_detector.should_ask_clarifications(ambiguity_data)
         
-        # Stage 4: Clarification (if needed)
-        if ambiguity_detector.should_ask_clarifications(ambiguity_data):
-            with show_loading_message("❓ Generating clarification questions..."):
-                questions = ambiguity_detector.generate_clarification_questions(
-                    user_input,
-                    ambiguity_data
-                )
-                st.session_state.clarification_questions = questions
+        if should_clarify:
+            with show_loading_message("❓ Generating smart questions..."):
+                if st.session_state.enable_advanced_features:
+                    smart_questions = confidence_engine.generate_smart_questions(
+                        st.session_state.confidence_assessment,
+                        user_input,
+                        max_questions=st.session_state.get("max_questions", 3)
+                    )
+                    st.session_state.clarification_questions = smart_questions.get("questions", [])
+                else:
+                    questions = ambiguity_detector.generate_clarification_questions(
+                        user_input, st.session_state.ambiguity_data
+                    )
+                    st.session_state.clarification_questions = questions
+                
                 st.session_state.current_stage = "clarification"
         else:
             # Skip to planning
@@ -291,17 +376,69 @@ def process_user_input(user_input: str):
         st.session_state.current_stage = "input"
 
 def generate_plan(user_input: str):
-    """Generate action plan and alternatives."""
+    """Generate optimized action plan with validation."""
     try:
-        # Stage 5: Action Plan Generation
-        with show_loading_message("📋 Creating your action plan..."):
-            plan_data = planner.generate_plan(
-                user_input,
-                st.session_state.intent_data,
-                st.session_state.constraint_data,
-                st.session_state.clarification_responses
-            )
-            st.session_state.plan_data = plan_data
+        # Advanced Stage 8: Multi-Plan Generation & Optimization
+        if st.session_state.enable_advanced_features:
+            with show_loading_message("📋 Generating multiple plan options..."):
+                multiple_plans_data = plan_optimizer.generate_multiple_plans(
+                    user_input,
+                    st.session_state.intent_data,
+                    st.session_state.constraint_data,
+                    num_plans=3
+                )
+                st.session_state.multiple_plans = multiple_plans_data.get("plans", [])
+            
+            with show_loading_message("⚖️ Scoring and optimizing plans..."):
+                scored_plans_data = plan_optimizer.score_plans(
+                    st.session_state.multiple_plans,
+                    st.session_state.constraint_data
+                )
+                st.session_state.scored_plans = scored_plans_data.get("scored_plans", [])
+                
+                # Select optimal plan
+                optimal_plan_id = scored_plans_data.get("optimal_plan_id")
+                optimal_plan = next(
+                    (p for p in st.session_state.multiple_plans if p.get("plan_id") == optimal_plan_id),
+                    st.session_state.multiple_plans[0] if st.session_state.multiple_plans else {}
+                )
+                
+                # Convert optimal plan to standard format
+                st.session_state.plan_data = {
+                    "plan": optimal_plan.get("steps", []),
+                    "total_estimated_time": optimal_plan.get("total_time", "Unknown"),
+                    "total_cost": optimal_plan.get("total_cost", "N/A"),
+                    "strategy": optimal_plan.get("strategy", "balanced"),
+                    "success_probability": optimal_plan.get("success_probability", 0.8),
+                    "critical_path": [],
+                    "risks": [d for d in optimal_plan.get("key_disadvantages", [])],
+                    "success_metrics": [a for a in optimal_plan.get("key_advantages", [])]
+                }
+        else:
+            # Standard plan generation
+            with show_loading_message("📋 Creating your action plan..."):
+                plan_data = planner.generate_plan(
+                    user_input,
+                    st.session_state.intent_data,
+                    st.session_state.constraint_data,
+                    st.session_state.clarification_responses
+                )
+                st.session_state.plan_data = plan_data
+        
+        # Advanced Stage 9: Guardrail Validation
+        if st.session_state.enable_advanced_features:
+            with show_loading_message("🛡️ Validating plan..."):
+                validation, corrected_plan = guardrail_validator.validate_and_correct(
+                    user_input,
+                    st.session_state.constraint_data,
+                    st.session_state.plan_data,
+                    auto_correct=True
+                )
+                st.session_state.validation_results = validation
+                
+                # Use corrected plan if corrections were made
+                if validation.get("was_corrected"):
+                    st.session_state.plan_data = corrected_plan
         
         # Stage 6: Alternative Strategies
         with show_loading_message("🔄 Generating alternative strategies..."):
@@ -405,7 +542,17 @@ def main():
             st.divider()
         
         # Create tabs for better organization
-        tab1, tab2, tab3, tab4 = st.tabs(["📊 Analysis", "📋 Action Plan", "📈 Visualizations", "💾 Export"])
+        if st.session_state.enable_advanced_features:
+            tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+                "📊 Analysis", 
+                "🎯 Advanced Analysis",
+                "📋 Action Plan", 
+                "📈 Visualizations", 
+                "🧠 Intelligence",
+                "💾 Export"
+            ])
+        else:
+            tab1, tab2, tab3, tab4 = st.tabs(["📊 Analysis", "📋 Action Plan", "📈 Visualizations", "💾 Export"])
         
         with tab1:
             # Intent Breakdown
@@ -504,6 +651,113 @@ def main():
                             st.error(f"Failed to save: {str(e)}")
             else:
                 st.info("Complete the analysis to export your plan.")
+        
+        # Advanced Features Tabs
+        if st.session_state.enable_advanced_features:
+            with tab2:
+                # Advanced Analysis Tab
+                st.markdown("## 🎯 Advanced Intelligence Analysis")
+                
+                # Multi-Intent Analysis
+                if st.session_state.multi_intent_data:
+                    render_multi_intent_analysis(st.session_state.multi_intent_data)
+                    st.divider()
+                
+                # Conflict Resolution
+                if st.session_state.conflict_resolution:
+                    render_conflict_resolution(st.session_state.conflict_resolution)
+                    st.divider()
+                
+                # Confidence Assessment
+                if st.session_state.confidence_assessment:
+                    render_confidence_dashboard(st.session_state.confidence_assessment)
+                else:
+                    st.info("Advanced analysis will appear here after processing your input.")
+            
+            with tab5:
+                # Intelligence Tab
+                st.markdown("## 🧠 AI Intelligence Features")
+                
+                # Plan Comparison
+                if st.session_state.multiple_plans and st.session_state.scored_plans:
+                    render_plan_comparison(
+                        st.session_state.multiple_plans,
+                        st.session_state.scored_plans
+                    )
+                    st.divider()
+                
+                # Intent Drift Analysis
+                if st.session_state.drift_analysis:
+                    render_drift_analysis(st.session_state.drift_analysis)
+                    st.divider()
+                
+                # Intent History
+                if st.session_state.use_memory:
+                    history = intent_memory.get_intent_history(limit=5)
+                    if history:
+                        render_intent_history(history)
+                    st.divider()
+                
+                # Validation Results
+                if st.session_state.validation_results:
+                    render_validation_results(st.session_state.validation_results)
+                
+                if not any([
+                    st.session_state.multiple_plans,
+                    st.session_state.drift_analysis,
+                    st.session_state.validation_results
+                ]):
+                    st.info("Intelligence features will appear here after analysis.")
+            
+            with tab6:
+                # Export tab (same as tab4 in non-advanced mode)
+                if st.session_state.current_stage == "complete":
+                    render_export_options(
+                        st.session_state.plan_data,
+                        st.session_state.intent_data,
+                        st.session_state.constraint_data
+                    )
+                    
+                    st.divider()
+                    
+                    # Save session with memory
+                    st.subheader("💾 Save Session")
+                    st.caption("Save this analysis to load later")
+                    
+                    col1, col2 = st.columns([3, 1])
+                    with col1:
+                        session_name = st.text_input(
+                            "Session name (optional)",
+                            placeholder="my_project",
+                            label_visibility="collapsed",
+                            key="advanced_session_name"
+                        )
+                    with col2:
+                        if st.button("💾 Save", type="primary", use_container_width=True, key="advanced_save"):
+                            try:
+                                # Save to session manager
+                                filepath = session_manager.save_session(
+                                    intent_data=st.session_state.intent_data,
+                                    constraint_data=st.session_state.constraint_data,
+                                    plan_data=st.session_state.plan_data,
+                                    user_input=st.session_state.current_user_input,
+                                    alternatives=st.session_state.alternatives,
+                                    session_name=session_name if session_name else None
+                                )
+                                
+                                # Save to intent memory
+                                if st.session_state.use_memory:
+                                    intent_memory.save_intent(
+                                        st.session_state.intent_data,
+                                        st.session_state.constraint_data,
+                                        st.session_state.plan_data
+                                    )
+                                
+                                st.success(f"✅ Session saved with memory!")
+                            except Exception as e:
+                                st.error(f"Failed to save: {str(e)}")
+                else:
+                    st.info("Complete the analysis to export your plan.")
 
 if __name__ == "__main__":
     main()
