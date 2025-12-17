@@ -15,7 +15,7 @@ class Settings:
             if hasattr(st, 'secrets') and len(st.secrets) > 0:
                 # Running in Streamlit Cloud with secrets
                 self.OPENAI_API_KEY = st.secrets.get("OPENAI_API_KEY", "")
-                self.MODEL_NAME = st.secrets.get("MODEL_NAME", "gpt-4-turbo-preview")
+                self.MODEL_NAME = st.secrets.get("MODEL_NAME", "gpt-4o-mini")
                 self.TEMPERATURE = float(st.secrets.get("TEMPERATURE", "0.7"))
                 self.MAX_TOKENS = int(st.secrets.get("MAX_TOKENS", "2000"))
             else:
@@ -36,7 +36,7 @@ class Settings:
     def _load_from_env(self):
         """Load settings from environment variables."""
         self.OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
-        self.MODEL_NAME = os.getenv("MODEL_NAME", "gpt-4-turbo-preview")
+        self.MODEL_NAME = os.getenv("MODEL_NAME", "gpt-4o-mini")
         self.TEMPERATURE = float(os.getenv("TEMPERATURE", "0.7"))
         self.MAX_TOKENS = int(os.getenv("MAX_TOKENS", "2000"))
     

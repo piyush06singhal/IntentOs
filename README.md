@@ -53,7 +53,7 @@ pip install -r requirements.txt
 Create a `.env` file in the root directory:
 ```env
 OPENAI_API_KEY=your_api_key_here
-MODEL_NAME=gpt-4-turbo-preview
+MODEL_NAME=gpt-4o-mini
 TEMPERATURE=0.7
 MAX_TOKENS=2000
 ```
