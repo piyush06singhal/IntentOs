@@ -565,17 +565,15 @@ def main():
     if analyze_button:
         if user_input and user_input.strip():
             try:
-                st.session_state.current_stage = "processing"
                 st.session_state.current_user_input = user_input.strip()
                 process_user_input(user_input.strip())
-                st.rerun()
+                # Don't call st.rerun() here - let the page naturally show results
             except Exception as e:
                 st.error(f"❌ Error during analysis: {str(e)}")
                 st.exception(e)  # Show full traceback
                 st.session_state.current_stage = "input"
         else:
             st.warning("⚠️ Please enter your goal in the text box above before clicking Analyze")
-            st.info(f"Debug: Input received: '{user_input}' (length: {len(user_input) if user_input else 0})")
     
     st.divider()
     
