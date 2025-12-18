@@ -17,7 +17,7 @@ class Settings:
                 self.LLM_PROVIDER = st.secrets.get("LLM_PROVIDER", "gemini")
                 self.OPENAI_API_KEY = st.secrets.get("OPENAI_API_KEY", "")
                 self.GEMINI_API_KEY = st.secrets.get("GEMINI_API_KEY", "")
-                self.MODEL_NAME = st.secrets.get("MODEL_NAME", "gemini-2.5-flash")
+                self.MODEL_NAME = st.secrets.get("MODEL_NAME", "gemini-2.0-flash")
                 self.TEMPERATURE = float(st.secrets.get("TEMPERATURE", "0.7"))
                 self.MAX_TOKENS = int(st.secrets.get("MAX_TOKENS", "2000"))
             else:
@@ -40,7 +40,7 @@ class Settings:
         self.LLM_PROVIDER = os.getenv("LLM_PROVIDER", "gemini")
         self.OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
         self.GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
-        self.MODEL_NAME = os.getenv("MODEL_NAME", "gemini-2.5-flash")
+        self.MODEL_NAME = os.getenv("MODEL_NAME", "gemini-2.0-flash")
         self.TEMPERATURE = float(os.getenv("TEMPERATURE", "0.7"))
         self.MAX_TOKENS = int(os.getenv("MAX_TOKENS", "2000"))
     
