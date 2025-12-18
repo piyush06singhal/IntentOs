@@ -590,19 +590,10 @@ def main():
             st.divider()
         
         # Create tabs for better organization
-        if st.session_state.enable_advanced_features:
-            tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
-                "📊 Analysis", 
-                "🎯 Advanced Analysis",
-                "📋 Action Plan", 
-                "📈 Visualizations", 
-                "🧠 Intelligence",
-                "💾 Export"
-            ])
-        else:
-            tab1, tab2, tab3, tab4 = st.tabs(["📊 Analysis", "📋 Action Plan", "📈 Visualizations", "💾 Export"])
+        tabs = st.tabs(["📊 Analysis", "📋 Action Plan", "📈 Visualizations", "💾 Export"])
+        tab_analysis, tab_plan, tab_viz, tab_export = tabs
         
-        with tab1:
+        with tab_analysis:
             # Intent Breakdown
             if st.session_state.intent_data:
                 col1, col2 = st.columns([2, 1])
@@ -634,10 +625,10 @@ def main():
                     if st.button("✅ Submit Answers", type="primary"):
                         st.session_state.clarification_responses = responses
                         st.session_state.current_stage = "planning"
-                        generate_plan(user_input)
-                        st.rerun()
+                        generate_plan(st.session_state.current_user_input)
+                        # Don't call st.rerun() - let results display naturally
         
-        with tab2:
+        with tab_plan:
             # Action Plan
             if st.session_state.current_stage == "complete":
                 if st.session_state.plan_data:
@@ -654,14 +645,14 @@ def main():
             else:
                 st.info("Complete the analysis to see your action plan.")
         
-        with tab3:
+        with tab_viz:
             # Visualizations
             if st.session_state.current_stage == "complete" and st.session_state.plan_data:
                 render_timeline_visualization(st.session_state.plan_data)
             else:
                 st.info("Complete the analysis to see visualizations.")
         
-        with tab4:
+        with tab_export:
             # Export Options
             if st.session_state.current_stage == "complete":
                 render_export_options(
@@ -700,112 +691,7 @@ def main():
             else:
                 st.info("Complete the analysis to export your plan.")
         
-        # Advanced Features Tabs
-        if st.session_state.enable_advanced_features:
-            with tab2:
-                # Advanced Analysis Tab
-                st.markdown("## 🎯 Advanced Intelligence Analysis")
-                
-                # Multi-Intent Analysis
-                if st.session_state.multi_intent_data:
-                    render_multi_intent_analysis(st.session_state.multi_intent_data)
-                    st.divider()
-                
-                # Conflict Resolution
-                if st.session_state.conflict_resolution:
-                    render_conflict_resolution(st.session_state.conflict_resolution)
-                    st.divider()
-                
-                # Confidence Assessment
-                if st.session_state.confidence_assessment:
-                    render_confidence_dashboard(st.session_state.confidence_assessment)
-                else:
-                    st.info("Advanced analysis will appear here after processing your input.")
-            
-            with tab5:
-                # Intelligence Tab
-                st.markdown("## 🧠 AI Intelligence Features")
-                
-                # Plan Comparison
-                if st.session_state.multiple_plans and st.session_state.scored_plans:
-                    render_plan_comparison(
-                        st.session_state.multiple_plans,
-                        st.session_state.scored_plans
-                    )
-                    st.divider()
-                
-                # Intent Drift Analysis
-                if st.session_state.drift_analysis:
-                    render_drift_analysis(st.session_state.drift_analysis)
-                    st.divider()
-                
-                # Intent History
-                if st.session_state.use_memory:
-                    history = intent_memory.get_intent_history(limit=5)
-                    if history:
-                        render_intent_history(history)
-                    st.divider()
-                
-                # Validation Results
-                if st.session_state.validation_results:
-                    render_validation_results(st.session_state.validation_results)
-                
-                if not any([
-                    st.session_state.multiple_plans,
-                    st.session_state.drift_analysis,
-                    st.session_state.validation_results
-                ]):
-                    st.info("Intelligence features will appear here after analysis.")
-            
-            with tab6:
-                # Export tab (same as tab4 in non-advanced mode)
-                if st.session_state.current_stage == "complete":
-                    render_export_options(
-                        st.session_state.plan_data,
-                        st.session_state.intent_data,
-                        st.session_state.constraint_data
-                    )
-                    
-                    st.divider()
-                    
-                    # Save session with memory
-                    st.subheader("💾 Save Session")
-                    st.caption("Save this analysis to load later")
-                    
-                    col1, col2 = st.columns([3, 1])
-                    with col1:
-                        session_name = st.text_input(
-                            "Session name (optional)",
-                            placeholder="my_project",
-                            label_visibility="collapsed",
-                            key="advanced_session_name"
-                        )
-                    with col2:
-                        if st.button("💾 Save", type="primary", use_container_width=True, key="advanced_save"):
-                            try:
-                                # Save to session manager
-                                filepath = session_manager.save_session(
-                                    intent_data=st.session_state.intent_data,
-                                    constraint_data=st.session_state.constraint_data,
-                                    plan_data=st.session_state.plan_data,
-                                    user_input=st.session_state.current_user_input,
-                                    alternatives=st.session_state.alternatives,
-                                    session_name=session_name if session_name else None
-                                )
-                                
-                                # Save to intent memory
-                                if st.session_state.use_memory:
-                                    intent_memory.save_intent(
-                                        st.session_state.intent_data,
-                                        st.session_state.constraint_data,
-                                        st.session_state.plan_data
-                                    )
-                                
-                                st.success(f"✅ Session saved with memory!")
-                            except Exception as e:
-                                st.error(f"Failed to save: {str(e)}")
-                else:
-                    st.info("Complete the analysis to export your plan.")
+
 
 if __name__ == "__main__":
     main()
