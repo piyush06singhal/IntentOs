@@ -2,14 +2,21 @@ import { NextResponse } from 'next/server'
 import { generateWithGemini } from '@/lib/gemini'
 import {
   SYSTEM_ROLE,
-  INTENT_EXTRACTION_PROMPT,
+  MULTI_INTENT_ANALYSIS_PROMPT,
+  CLARIFICATION_STRATEGY_PROMPT,
   CONSTRAINT_EXTRACTION_PROMPT,
-  ACTION_PLAN_PROMPT,
+  MULTI_PLAN_GENERATION_PROMPT,
+  VALIDATION_PROMPT,
 } from '@/lib/prompts'
+
+// ============================================================================
+// INTENTOS ADVANCED REASONING PIPELINE
+// Multi-stage AI decision intelligence system
+// ============================================================================
 
 export async function POST(request: Request) {
   try {
-    const { input } = await request.json()
+    const { input, sessionHistory = [] } = await request.json()
 
     if (!input || !input.trim()) {
       return NextResponse.json(
@@ -18,34 +25,87 @@ export async function POST(request: Request) {
       )
     }
 
-    // Step 1: Extract Intent
-    const intent = await generateWithGemini(
-      INTENT_EXTRACTION_PROMPT(input),
+    console.log('🚀 Starting IntentOS Advanced Pipeline...')
+
+    // ========================================================================
+    // STAGE 1: MULTI-INTENT DECOMPOSITION WITH CONFLICT RESOLUTION
+    // ========================================================================
+    console.log('📊 Stage 1: Multi-Intent Analysis...')
+    const intentAnalysis = await generateWithGemini(
+      MULTI_INTENT_ANALYSIS_PROMPT(input, sessionHistory),
       SYSTEM_ROLE
     )
 
-    // Step 2: Extract Constraints
+    // ========================================================================
+    // STAGE 2: CONSTRAINT EXTRACTION
+    // ========================================================================
+    console.log('⚙️ Stage 2: Constraint Extraction...')
     const constraints = await generateWithGemini(
       CONSTRAINT_EXTRACTION_PROMPT(input),
       SYSTEM_ROLE
     )
 
-    // Step 3: Generate Action Plan
-    const plan = await generateWithGemini(
-      ACTION_PLAN_PROMPT(input, intent, constraints),
+    // ========================================================================
+    // STAGE 3: CONFIDENCE-DRIVEN CLARIFICATION ENGINE
+    // ========================================================================
+    console.log('❓ Stage 3: Clarification Strategy...')
+    const clarification = await generateWithGemini(
+      CLARIFICATION_STRATEGY_PROMPT(input, intentAnalysis, constraints),
       SYSTEM_ROLE
     )
 
+    // ========================================================================
+    // STAGE 4: MULTI-PLAN GENERATION & OPTIMIZATION
+    // ========================================================================
+    console.log('🎯 Stage 4: Multi-Plan Generation...')
+    const planAnalysis = await generateWithGemini(
+      MULTI_PLAN_GENERATION_PROMPT(
+        input,
+        intentAnalysis,
+        constraints,
+        intentAnalysis.conflicts || []
+      ),
+      SYSTEM_ROLE
+    )
+
+    // ========================================================================
+    // STAGE 5: HALLUCINATION & CONTRADICTION GUARDRAIL
+    // ========================================================================
+    console.log('🛡️ Stage 5: Validation & Guardrails...')
+    const validation = await generateWithGemini(
+      VALIDATION_PROMPT(input, planAnalysis, constraints),
+      SYSTEM_ROLE
+    )
+
+    // ========================================================================
+    // FINAL OUTPUT ASSEMBLY
+    // ========================================================================
+    console.log('✅ Pipeline Complete!')
+
     return NextResponse.json({
-      intent,
+      success: true,
+      pipeline_version: '2.0-advanced',
+      intent: intentAnalysis,
       constraints,
-      plan,
-      alternatives: [],
+      clarification,
+      plans: planAnalysis,
+      validation,
+      metadata: {
+        processing_stages: 5,
+        confidence: clarification.overall_confidence,
+        needs_clarification: clarification.needs_clarification,
+        is_valid: validation.is_valid,
+        safe_to_present: validation.safe_to_present,
+      },
     })
   } catch (error: any) {
-    console.error('Analysis error:', error)
+    console.error('❌ Pipeline error:', error)
     return NextResponse.json(
-      { error: error.message || 'Failed to analyze' },
+      { 
+        success: false,
+        error: error.message || 'Failed to analyze',
+        stage: 'unknown'
+      },
       { status: 500 }
     )
   }
