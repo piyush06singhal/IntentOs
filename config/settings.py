@@ -14,10 +14,11 @@ class Settings:
             import streamlit as st
             if hasattr(st, 'secrets') and len(st.secrets) > 0:
                 # Running in Streamlit Cloud with secrets
-                self.LLM_PROVIDER = st.secrets.get("LLM_PROVIDER", "gemini")
+                self.LLM_PROVIDER = st.secrets.get("LLM_PROVIDER", "ollama")
                 self.OPENAI_API_KEY = st.secrets.get("OPENAI_API_KEY", "")
                 self.GEMINI_API_KEY = st.secrets.get("GEMINI_API_KEY", "")
-                self.MODEL_NAME = st.secrets.get("MODEL_NAME", "gemini-2.0-flash")
+                self.OLLAMA_URL = st.secrets.get("OLLAMA_URL", "http://localhost:11434")
+                self.MODEL_NAME = st.secrets.get("MODEL_NAME", "llama3.2")
                 self.TEMPERATURE = float(st.secrets.get("TEMPERATURE", "0.7"))
                 self.MAX_TOKENS = int(st.secrets.get("MAX_TOKENS", "2000"))
             else:
@@ -37,10 +38,11 @@ class Settings:
     
     def _load_from_env(self):
         """Load settings from environment variables."""
-        self.LLM_PROVIDER = os.getenv("LLM_PROVIDER", "gemini")
+        self.LLM_PROVIDER = os.getenv("LLM_PROVIDER", "ollama")
         self.OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
         self.GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
-        self.MODEL_NAME = os.getenv("MODEL_NAME", "gemini-2.0-flash")
+        self.OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
+        self.MODEL_NAME = os.getenv("MODEL_NAME", "llama3.2")
         self.TEMPERATURE = float(os.getenv("TEMPERATURE", "0.7"))
         self.MAX_TOKENS = int(os.getenv("MAX_TOKENS", "2000"))
     
@@ -56,6 +58,9 @@ class Settings:
                 "GEMINI_API_KEY is required when using Gemini. "
                 "Get your free key at: https://makersuite.google.com/app/apikey"
             )
+        elif self.LLM_PROVIDER == "ollama":
+            # Ollama doesn't need API keys - just needs to be running
+            pass
         return True
 
 settings = Settings()

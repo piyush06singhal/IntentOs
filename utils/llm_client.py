@@ -20,6 +20,14 @@ class LLMClient:
             import google.generativeai as genai
             genai.configure(api_key=settings.GEMINI_API_KEY)
             self.client = genai.GenerativeModel(self.model)
+        elif self.provider == "ollama":
+            # Ollama runs locally - no API key needed!
+            try:
+                import requests
+                self.client = None  # We'll use requests directly
+                self.ollama_url = settings.OLLAMA_URL
+            except ImportError:
+                raise ImportError("requests library required for Ollama")
     
     def generate(
         self,
@@ -78,6 +86,36 @@ class LLMClient:
                 generation_config=generation_config
             )
             return response.text
+        
+        elif self.provider == "ollama":
+            # Ollama - local LLM, no rate limits!
+            import requests
+            
+            combined_prompt = f"{system_prompt}\n\n{user_prompt}"
+            
+            if response_format == "json_object":
+                combined_prompt += "\n\nIMPORTANT: Return ONLY valid JSON, no additional text."
+            
+            payload = {
+                "model": self.model,
+                "prompt": combined_prompt,
+                "stream": False,
+                "options": {
+                    "temperature": temperature or self.temperature,
+                    "num_predict": max_tokens or self.max_tokens
+                }
+            }
+            
+            response = requests.post(
+                f"{self.ollama_url}/api/generate",
+                json=payload,
+                timeout=120
+            )
+            
+            if response.status_code == 200:
+                return response.json()["response"]
+            else:
+                raise Exception(f"Ollama error: {response.text}")
     
     def generate_json(
         self,
