@@ -1072,18 +1072,6 @@ export default function Home() {
         />
       )}
 
-      {/* Footer */}
-      <footer className="relative border-t border-slate-700/50 bg-slate-900/80 backdrop-blur-sm mt-20">
-        <div className="container mx-auto px-4 py-8">
-          <div className="text-center text-sm text-slate-400">
-            <p className="font-medium">Built with ❤️ using Next.js, Tailwind CSS, and Google Gemini AI</p>
-            <p className="mt-2">© 2024 IntentOS v2.1 - Advanced AI Decision Intelligence System</p>
-            <p className="mt-2 text-xs text-slate-500">
-              Interactive Clarification • Visual Analytics • 5 AI Features • Real-time Validation
-            </p>
-          </div>
-        </div>
-      </footer>
     </div>
   )
 }
