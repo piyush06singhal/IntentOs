@@ -1,11 +1,12 @@
 {
-  "buildCommand": "npm run build",
-  "devCommand": "npm run dev",
+  "buildCommand": "rm -rf .next && npm run build",
   "installCommand": "npm install",
   "framework": "nextjs",
   "functions": {
     "app/api/**/*.ts": {
       "maxDuration": 60
     }
-  }
+  },
+  "cleanUrls": true,
+  "trailingSlash": false
 }

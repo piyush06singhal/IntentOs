@@ -1,6 +1,8 @@
-node_modules
 .next
+node_modules
 .git
-.vscode
-*.log
 .env.local
+*.log
+.DS_Store
+test-*.js
+list-*.js
