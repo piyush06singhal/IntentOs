@@ -16,9 +16,10 @@ async function tryGenerateWithModel(modelName: string, prompt: string, retryCoun
       model: modelName,
       generationConfig: {
         temperature: 0.7,
-        maxOutputTokens: 2500,
+        maxOutputTokens: 4000, // Increased to avoid truncation
         topP: 0.95,
         topK: 40,
+        responseMimeType: 'application/json', // Force JSON output
       }
     })
 
@@ -46,7 +47,18 @@ async function tryGenerateWithModel(modelName: string, prompt: string, retryCoun
 }
 
 export async function generateWithGemini(prompt: string, systemPrompt: string) {
-  const fullPrompt = `${systemPrompt}\n\n${prompt}\n\nIMPORTANT: Return ONLY valid JSON, no additional text.`
+  const fullPrompt = `${systemPrompt}
+
+${prompt}
+
+CRITICAL INSTRUCTIONS:
+1. Return ONLY valid JSON - no markdown, no explanations, no additional text
+2. Ensure all JSON is properly formatted with correct commas and brackets
+3. Do not include trailing commas in arrays or objects
+4. Escape all special characters in strings
+5. Start response with { and end with }
+
+Your response must be parseable by JSON.parse(). Begin your JSON response now:`
 
   // Try models in fallback order
   for (const modelName of MODEL_FALLBACK) {
@@ -64,16 +76,49 @@ export async function generateWithGemini(prompt: string, systemPrompt: string) {
         cleanText = cleanText.replace(/```\n?/g, '')
       }
 
+      // Remove any text before the first {
+      const firstBrace = cleanText.indexOf('{')
+      if (firstBrace > 0) {
+        cleanText = cleanText.substring(firstBrace)
+      }
+
+      // Remove any text after the last }
+      const lastBrace = cleanText.lastIndexOf('}')
+      if (lastBrace > 0 && lastBrace < cleanText.length - 1) {
+        cleanText = cleanText.substring(0, lastBrace + 1)
+      }
+
       // Try to parse JSON
       try {
-        return JSON.parse(cleanText)
-      } catch (e) {
-        // If direct parse fails, try to extract JSON from the response
-        const jsonMatch = cleanText.match(/\{[\s\S]*\}/)
-        if (jsonMatch) {
-          return JSON.parse(jsonMatch[0])
+        const parsed = JSON.parse(cleanText)
+        return parsed
+      } catch (e: any) {
+        console.error('JSON Parse Error:', e.message)
+        console.error('Problematic JSON:', cleanText.substring(0, 500))
+        
+        // Try to fix common JSON issues
+        try {
+          // Remove trailing commas
+          let fixed = cleanText.replace(/,(\s*[}\]])/g, '$1')
+          // Fix unescaped quotes in strings
+          fixed = fixed.replace(/([^\\])"([^"]*)":/g, '$1\\"$2\\":')
+          
+          const parsed = JSON.parse(fixed)
+          console.log('✅ Fixed and parsed JSON')
+          return parsed
+        } catch (e2) {
+          // If still fails, try to extract JSON from the response
+          const jsonMatch = cleanText.match(/\{[\s\S]*\}/)
+          if (jsonMatch) {
+            try {
+              return JSON.parse(jsonMatch[0])
+            } catch (e3) {
+              console.error('All JSON parsing attempts failed')
+              throw new Error(`Failed to parse AI response. Error: ${e.message}. Please try again.`)
+            }
+          }
+          throw new Error(`Failed to parse AI response. Error: ${e.message}. Please try again.`)
         }
-        throw new Error('Failed to parse AI response')
       }
     }
     
