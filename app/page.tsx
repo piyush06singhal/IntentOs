@@ -10,6 +10,7 @@ import {
 import { analyzeIntent } from '@/lib/api'
 import ClarificationDialog from '@/components/ClarificationDialog'
 import VisualizationCharts from '@/components/VisualizationCharts'
+import { generatePDFReport } from '@/lib/pdfGenerator'
 
 export default function Home() {
   const [input, setInput] = useState('')
@@ -1050,19 +1051,11 @@ export default function Home() {
                 className="flex justify-center gap-4"
               >
                 <button
-                  onClick={() => {
-                    const dataStr = JSON.stringify(results, null, 2)
-                    const dataBlob = new Blob([dataStr], { type: 'application/json' })
-                    const url = URL.createObjectURL(dataBlob)
-                    const link = document.createElement('a')
-                    link.href = url
-                    link.download = `intentos-analysis-${Date.now()}.json`
-                    link.click()
-                  }}
+                  onClick={() => generatePDFReport(results, input)}
                   className="flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-purple-600 via-blue-600 to-purple-600 text-white rounded-2xl font-bold hover:shadow-2xl hover:shadow-purple-500/50 hover:scale-105 transition-all"
                 >
                   <Download className="w-5 h-5" />
-                  Download Complete Analysis
+                  Download as PDF
                 </button>
               </motion.div>
             </motion.div>
