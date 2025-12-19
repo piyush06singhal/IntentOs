@@ -19,7 +19,6 @@ async function tryGenerateWithModel(modelName: string, prompt: string, retryCoun
         maxOutputTokens: 4000, // Increased to avoid truncation
         topP: 0.95,
         topK: 40,
-        responseMimeType: 'application/json', // Force JSON output
       }
     })
 
