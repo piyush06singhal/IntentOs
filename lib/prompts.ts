@@ -83,36 +83,64 @@ Return ONLY valid JSON.`
 // ============================================================================
 
 export const CLARIFICATION_STRATEGY_PROMPT = (userInput: string, intentAnalysis: any, constraints: any) => `
-Generate intelligent clarification questions ONLY if needed. Prioritize high-impact questions that reduce uncertainty.
+You are an expert consultant analyzing user goals. Generate intelligent clarification questions ONLY when critical information is missing.
 
 User Input: ${userInput}
 Intent Analysis: ${JSON.stringify(intentAnalysis)}
 Constraints: ${JSON.stringify(constraints)}
 
-RULES:
-- Only ask if confidence < 0.75 OR critical information is missing
-- Maximum 3 questions
-- Each question must significantly reduce uncertainty
-- Prioritize questions that affect plan feasibility
+CRITICAL RULES:
+- ONLY ask if confidence < 0.70 OR critical information is genuinely missing
+- Maximum 3 questions - each must be essential for planning
+- Questions must be specific, actionable, and directly impact the plan
+- Provide 3-5 realistic answer options for each question
+- If confidence >= 0.70 AND basic constraints are known, set needs_clarification to FALSE
 
-Return JSON:
+ANALYSIS CHECKLIST:
+✓ Do we know the user's experience level? (beginner/intermediate/advanced)
+✓ Do we know their time availability? (hours per week or deadline)
+✓ Do we know their primary goal clearly?
+✓ Do we know their budget/resource constraints?
+
+If 3+ of these are known, set needs_clarification to FALSE.
+
+Return JSON with this EXACT structure:
 {
-  "needs_clarification": true|false,
-  "overall_confidence": 0.0-1.0,
-  "clarification_questions": [
-    {
-      "question": "specific question",
-      "reason": "why this matters",
-      "impact": "high|medium|low",
-      "question_type": "constraint|preference|scope|priority",
-      "suggested_answers": ["option1", "option2", "option3"]
-    }
+  "needs_clarification": false,
+  "overall_confidence": 0.85,
+  "clarification_questions": [],
+  "can_proceed_without_clarification": true,
+  "assumptions_if_proceeding": [
+    "Assuming intermediate skill level based on goal complexity",
+    "Assuming 10-15 hours per week availability (typical for side projects)"
   ],
-  "can_proceed_without_clarification": true|false,
-  "assumptions_if_proceeding": ["what we'll assume if user doesn't answer"]
+  "missing_info_severity": "low"
 }
 
-Return ONLY valid JSON.`
+OR if clarification IS needed:
+{
+  "needs_clarification": true,
+  "overall_confidence": 0.55,
+  "clarification_questions": [
+    {
+      "question": "What is your current experience level with [specific skill]?",
+      "reason": "This determines the starting point and learning curve",
+      "impact": "high",
+      "question_type": "skill_level",
+      "suggested_answers": [
+        "Complete beginner - never done this before",
+        "Some exposure - tried tutorials or courses",
+        "Intermediate - built 1-2 projects",
+        "Advanced - professional experience"
+      ]
+    }
+  ],
+  "can_proceed_without_clarification": false,
+  "assumptions_if_proceeding": [],
+  "missing_info_severity": "high"
+}
+
+Return ONLY valid JSON. Be conservative - prefer proceeding with assumptions over asking questions.`
 
 // ============================================================================
 // FEATURE 3: CONSTRAINT-AWARE PLAN OPTIMIZATION
@@ -164,12 +192,19 @@ Return JSON:
 Return ONLY valid JSON. Use null for truly missing information.`
 
 export const MULTI_PLAN_GENERATION_PROMPT = (userInput: string, intent: any, constraints: any, conflicts: any) => `
-Generate MULTIPLE candidate plans optimized for different constraint priorities. Then select the optimal one.
+You are a world-class strategic planner. Generate MULTIPLE highly detailed, actionable plans optimized for different priorities.
 
 User Input: ${userInput}
 Intent: ${JSON.stringify(intent)}
 Constraints: ${JSON.stringify(constraints)}
 Conflicts: ${JSON.stringify(conflicts)}
+
+PLANNING PRINCIPLES:
+1. Be SPECIFIC - no vague steps like "learn the basics"
+2. Be REALISTIC - time estimates must match actual learning curves
+3. Be ACTIONABLE - each step should have clear deliverables
+4. Be MEASURABLE - include concrete success criteria
+5. Be ADAPTIVE - account for user's actual constraints
 
 Generate 3 candidate plans:
 1. OPTIMAL PLAN: Best balance of all constraints
