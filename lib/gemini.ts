@@ -28,10 +28,22 @@ async function tryGenerateWithModel(modelName: string, prompt: string, retryCoun
 
     return { success: true, text, model: modelName }
   } catch (error: any) {
-    // Check if it's a quota error
+    // Check if it's a quota error (429)
     if (error.message?.includes('429') || error.message?.includes('quota')) {
       console.log(`⚠️ Quota exceeded for ${modelName}`)
       return { success: false, error: 'quota', message: error.message }
+    }
+    
+    // Check if it's a 503 Service Unavailable (overloaded)
+    if (error.message?.includes('503') || error.message?.includes('overloaded')) {
+      if (retryCount < 3) {
+        const waitTime = (retryCount + 1) * 2000 // 2s, 4s, 6s
+        console.log(`⏳ Model overloaded, retrying ${modelName} in ${waitTime/1000}s... (attempt ${retryCount + 1}/3)`)
+        await new Promise(resolve => setTimeout(resolve, waitTime))
+        return tryGenerateWithModel(modelName, prompt, retryCount + 1)
+      }
+      console.log(`❌ ${modelName} still overloaded after 3 retries`)
+      return { success: false, error: 'overloaded', message: error.message }
     }
     
     // Check if it's a rate limit with retry info
@@ -121,8 +133,8 @@ Your response must be parseable by JSON.parse(). Begin your JSON response now:`
       }
     }
     
-    // If quota error, try next model
-    if (result.error === 'quota') {
+    // If quota error or overloaded, try next model
+    if (result.error === 'quota' || result.error === 'overloaded') {
       console.log(`⏭️ Trying next model...`)
       continue
     }
@@ -132,5 +144,5 @@ Your response must be parseable by JSON.parse(). Begin your JSON response now:`
   }
   
   // All models failed
-  throw new Error('All Gemini models exceeded quota. Please try again later or upgrade your API plan.')
+  throw new Error('All Gemini models are currently unavailable (quota exceeded or overloaded). Please wait a few minutes and try again.')
 }
