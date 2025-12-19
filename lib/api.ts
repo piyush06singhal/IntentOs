@@ -1,10 +1,10 @@
-export async function analyzeIntent(userInput: string, sessionHistory: any[] = []) {
+export async function analyzeIntent(userInput: string, sessionHistory: any[] = [], userAnswers?: any) {
   const response = await fetch('/api/analyze', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ input: userInput, sessionHistory }),
+    body: JSON.stringify({ input: userInput, sessionHistory, userAnswers }),
   })
 
   if (!response.ok) {

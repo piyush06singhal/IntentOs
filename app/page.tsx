@@ -8,13 +8,19 @@ import {
   Shield, GitBranch, Activity, Award, ChevronDown, ChevronUp, History
 } from 'lucide-react'
 import { analyzeIntent } from '@/lib/api'
+import ClarificationDialog from '@/components/ClarificationDialog'
+import VisualizationCharts from '@/components/VisualizationCharts'
 
 export default function Home() {
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
+  const [loadingStage, setLoadingStage] = useState('')
   const [results, setResults] = useState<any>(null)
   const [error, setError] = useState('')
   const [sessionHistory, setSessionHistory] = useState<any[]>([])
+  const [showClarification, setShowClarification] = useState(false)
+  const [clarificationData, setClarificationData] = useState<any>(null)
+  const [userAnswers, setUserAnswers] = useState<any>(null)
   const [expandedSections, setExpandedSections] = useState<{[key: string]: boolean}>({
     conflicts: true,
     clarification: true,
@@ -33,17 +39,13 @@ export default function Home() {
     }
   }, [])
 
-  const handleAnalyze = async () => {
-    if (!input.trim()) {
-      setError('Please enter your goal')
-      return
-    }
-
+  const proceedWithFullAnalysis = async (answers?: any) => {
     setLoading(true)
+    setLoadingStage('Generating detailed action plans...')
     setError('')
     
     try {
-      const data = await analyzeIntent(input, sessionHistory)
+      const data = await analyzeIntent(input, sessionHistory, answers)
       setResults(data)
       
       const newHistory = [...sessionHistory, { input, timestamp: Date.now(), intent: data.intent }]
@@ -52,15 +54,73 @@ export default function Home() {
     } catch (err: any) {
       const errorMessage = err.message || 'Failed to analyze. Please try again.'
       
-      // Check if it's a quota error
       if (errorMessage.includes('quota') || errorMessage.includes('429')) {
-        setError('⚠️ API Quota Exceeded: The free tier allows 20 requests per day. Please wait 24 hours or use a different API key. The system tried multiple models but all exceeded quota.')
+        setError('⚠️ API Quota Exceeded: The free tier allows 20 requests per day. Please wait 24 hours or use a different API key.')
       } else {
         setError(errorMessage)
       }
     } finally {
       setLoading(false)
+      setLoadingStage('')
     }
+  }
+
+  const handleAnalyze = async () => {
+    if (!input.trim()) {
+      setError('Please enter your goal')
+      return
+    }
+
+    setLoading(true)
+    setLoadingStage('Analyzing your goal...')
+    setError('')
+    
+    try {
+      // Stage 1: Quick clarification check
+      const clarifyResponse = await fetch('/api/clarify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ input, sessionHistory }),
+      })
+
+      const clarifyData = await clarifyResponse.json()
+
+      if (!clarifyData.success) {
+        throw new Error(clarifyData.error)
+      }
+
+      // Check if clarification is needed
+      if (clarifyData.needs_clarification && clarifyData.clarification.clarification_questions?.length > 0) {
+        setLoading(false)
+        setShowClarification(true)
+        setClarificationData(clarifyData)
+      } else {
+        // Proceed directly to full analysis
+        setLoadingStage('No clarification needed, proceeding with analysis...')
+        await proceedWithFullAnalysis()
+      }
+    } catch (err: any) {
+      const errorMessage = err.message || 'Failed to analyze. Please try again.'
+      
+      if (errorMessage.includes('quota') || errorMessage.includes('429')) {
+        setError('⚠️ API Quota Exceeded: Please wait 24 hours or use a different API key.')
+      } else {
+        setError(errorMessage)
+      }
+      setLoading(false)
+      setLoadingStage('')
+    }
+  }
+
+  const handleClarificationSubmit = (answers: any) => {
+    setShowClarification(false)
+    setUserAnswers(answers)
+    proceedWithFullAnalysis(answers)
+  }
+
+  const handleClarificationSkip = () => {
+    setShowClarification(false)
+    proceedWithFullAnalysis()
   }
 
   const toggleSection = (section: string) => {
@@ -238,7 +298,7 @@ export default function Home() {
                       {loading ? (
                         <>
                           <Loader2 className="w-6 h-6 animate-spin" />
-                          Analyzing through 5-stage pipeline...
+                          {loadingStage || 'Processing...'}
                         </>
                       ) : (
                         <>
@@ -334,6 +394,16 @@ export default function Home() {
                   </div>
                 </motion.div>
               )}
+
+              {/* Visualization Charts */}
+              {results.intent && results.constraints && results.plans && (
+                <VisualizationCharts 
+                  intent={results.intent}
+                  constraints={results.constraints}
+                  plans={results.plans}
+                />
+              )}
+
               {/* FEATURE 1: Multi-Intent with Conflicts */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
@@ -1000,14 +1070,23 @@ export default function Home() {
         </AnimatePresence>
       </div>
 
+      {/* Clarification Dialog */}
+      {showClarification && clarificationData && clarificationData.clarification.clarification_questions && (
+        <ClarificationDialog
+          questions={clarificationData.clarification.clarification_questions}
+          onSubmit={handleClarificationSubmit}
+          onSkip={handleClarificationSkip}
+        />
+      )}
+
       {/* Footer */}
       <footer className="relative border-t border-slate-700/50 bg-slate-900/80 backdrop-blur-sm mt-20">
         <div className="container mx-auto px-4 py-8">
           <div className="text-center text-sm text-slate-400">
             <p className="font-medium">Built with ❤️ using Next.js, Tailwind CSS, and Google Gemini AI</p>
-            <p className="mt-2">© 2024 IntentOS v2.0 - Advanced AI Decision Intelligence System</p>
+            <p className="mt-2">© 2024 IntentOS v2.1 - Advanced AI Decision Intelligence System</p>
             <p className="mt-2 text-xs text-slate-500">
-              5 Advanced Features: Multi-Intent • Clarification Engine • Multi-Plan • Memory • Guardrails
+              Interactive Clarification • Visual Analytics • 5 AI Features • Real-time Validation
             </p>
           </div>
         </div>
