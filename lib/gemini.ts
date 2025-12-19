@@ -4,10 +4,12 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
 
 export async function generateWithGemini(prompt: string, systemPrompt: string) {
   const model = genAI.getGenerativeModel({ 
-    model: 'gemini-2.5-flash',
+    model: 'gemini-2.5-flash', // Latest Gemini model - fast and powerful
     generationConfig: {
       temperature: 0.7,
-      maxOutputTokens: 2000,
+      maxOutputTokens: 3000,
+      topP: 0.95,
+      topK: 40,
     }
   })
 
