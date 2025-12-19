@@ -100,6 +100,20 @@ export async function POST(request: Request) {
     })
   } catch (error: any) {
     console.error('❌ Pipeline error:', error)
+    
+    // Check if it's a quota error
+    if (error.message?.includes('quota') || error.message?.includes('429')) {
+      return NextResponse.json(
+        { 
+          success: false,
+          error: 'API quota exceeded. The free tier allows 20 requests per day. Please try again later or use a different API key.',
+          errorType: 'quota_exceeded',
+          stage: 'ai_generation'
+        },
+        { status: 429 }
+      )
+    }
+    
     return NextResponse.json(
       { 
         success: false,

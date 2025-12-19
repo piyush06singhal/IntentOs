@@ -50,7 +50,14 @@ export default function Home() {
       setSessionHistory(newHistory.slice(-5))
       localStorage.setItem('intentos_history', JSON.stringify(newHistory.slice(-5)))
     } catch (err: any) {
-      setError(err.message || 'Failed to analyze. Please try again.')
+      const errorMessage = err.message || 'Failed to analyze. Please try again.'
+      
+      // Check if it's a quota error
+      if (errorMessage.includes('quota') || errorMessage.includes('429')) {
+        setError('⚠️ API Quota Exceeded: The free tier allows 20 requests per day. Please wait 24 hours or use a different API key. The system tried multiple models but all exceeded quota.')
+      } else {
+        setError(errorMessage)
+      }
     } finally {
       setLoading(false)
     }
