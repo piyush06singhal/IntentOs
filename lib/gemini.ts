@@ -1,6 +1,27 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
+// Multiple API keys for automatic fallback/rotation
+const API_KEYS = [
+  process.env.GEMINI_API_KEY || '',
+  process.env.GEMINI_API_KEY_2 || '',
+  process.env.GEMINI_API_KEY_3 || '',
+].filter(key => key) // Remove empty keys
+
+let currentKeyIndex = 0
+
+function getNextAPIKey(): string {
+  if (API_KEYS.length === 0) {
+    throw new Error('No API keys configured')
+  }
+  
+  const key = API_KEYS[currentKeyIndex]
+  currentKeyIndex = (currentKeyIndex + 1) % API_KEYS.length
+  return key
+}
+
+function getGenAI(): GoogleGenerativeAI {
+  return new GoogleGenerativeAI(getNextAPIKey())
+}
 
 // Model fallback chain - try lighter models if quota exceeded
 const MODEL_FALLBACK = [
@@ -10,8 +31,9 @@ const MODEL_FALLBACK = [
   'gemini-2.5-flash',           // Latest (highest quota)
 ]
 
-async function tryGenerateWithModel(modelName: string, prompt: string, retryCount = 0): Promise<any> {
+async function tryGenerateWithModel(modelName: string, prompt: string, retryCount = 0, keyAttempt = 0): Promise<any> {
   try {
+    const genAI = getGenAI() // Get next API key in rotation
     const model = genAI.getGenerativeModel({ 
       model: modelName,
       generationConfig: {
@@ -30,7 +52,14 @@ async function tryGenerateWithModel(modelName: string, prompt: string, retryCoun
   } catch (error: any) {
     // Check if it's a quota error (429)
     if (error.message?.includes('429') || error.message?.includes('quota')) {
-      console.log(`⚠️ Quota exceeded for ${modelName}`)
+      console.log(`⚠️ Quota exceeded for ${modelName} with API key ${keyAttempt + 1}`)
+      
+      // Try next API key if available
+      if (keyAttempt < API_KEYS.length - 1) {
+        console.log(`🔄 Trying with next API key (${keyAttempt + 2}/${API_KEYS.length})...`)
+        return tryGenerateWithModel(modelName, prompt, 0, keyAttempt + 1)
+      }
+      
       return { success: false, error: 'quota', message: error.message }
     }
     
