@@ -19,6 +19,14 @@ ADVANCED CAPABILITIES:
 4. Persistent Memory: Track intent evolution across sessions
 5. Hallucination Guardrails: Validate all outputs against extracted constraints
 
+JSON OUTPUT RULES:
+- ALWAYS return valid, parseable JSON
+- NO trailing commas in arrays or objects
+- ALWAYS close all brackets and braces
+- Keep responses concise to avoid truncation
+- Use proper escaping for special characters in strings
+- Test your JSON structure before responding
+
 You are precise, analytical, and consultative.`
 
 // ============================================================================
@@ -31,6 +39,8 @@ Perform deep multi-intent analysis on the user input. Detect ALL goals (primary,
 User Input: ${userInput}
 
 ${sessionHistory.length > 0 ? `Previous Session Context: ${JSON.stringify(sessionHistory.slice(-3))}` : ''}
+
+IMPORTANT: Keep your response concise. Limit arrays to maximum 3 items each. Be brief but precise.
 
 Analyze and return JSON:
 {
@@ -205,6 +215,8 @@ PLANNING PRINCIPLES:
 3. Be ACTIONABLE - each step should have clear deliverables
 4. Be MEASURABLE - include concrete success criteria
 5. Be ADAPTIVE - account for user's actual constraints
+
+IMPORTANT: Keep plans concise. Maximum 5-7 steps per plan. Be brief but actionable.
 
 Generate 3 candidate plans:
 1. OPTIMAL PLAN: Best balance of all constraints

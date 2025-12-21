@@ -38,7 +38,7 @@ async function tryGenerateWithModel(modelName: string, prompt: string, retryCoun
       model: modelName,
       generationConfig: {
         temperature: 0.7,
-        maxOutputTokens: 4000, // Increased to avoid truncation
+        maxOutputTokens: 8000, // Increased to avoid truncation
         topP: 0.95,
         topK: 40,
       }
@@ -134,29 +134,70 @@ Your response must be parseable by JSON.parse(). Begin your JSON response now:`
         return parsed
       } catch (e: any) {
         console.error('JSON Parse Error:', e.message)
-        console.error('Problematic JSON:', cleanText.substring(0, 500))
+        console.error('Problematic JSON (first 500 chars):', cleanText.substring(0, 500))
+        console.error('Problematic JSON (last 500 chars):', cleanText.substring(Math.max(0, cleanText.length - 500)))
         
         // Try to fix common JSON issues
         try {
-          // Remove trailing commas
-          let fixed = cleanText.replace(/,(\s*[}\]])/g, '$1')
-          // Fix unescaped quotes in strings
-          fixed = fixed.replace(/([^\\])"([^"]*)":/g, '$1\\"$2\\":')
+          let fixed = cleanText
           
+          // Remove trailing commas before closing brackets/braces
+          fixed = fixed.replace(/,(\s*[}\]])/g, '$1')
+          
+          // Fix incomplete arrays - find unclosed brackets
+          const openBrackets = (fixed.match(/\[/g) || []).length
+          const closeBrackets = (fixed.match(/\]/g) || []).length
+          if (openBrackets > closeBrackets) {
+            // Add missing closing brackets
+            fixed += ']'.repeat(openBrackets - closeBrackets)
+          }
+          
+          // Fix incomplete objects - find unclosed braces
+          const openBraces = (fixed.match(/\{/g) || []).length
+          const closeBraces = (fixed.match(/\}/g) || []).length
+          if (openBraces > closeBraces) {
+            // Add missing closing braces
+            fixed += '}'.repeat(openBraces - closeBraces)
+          }
+          
+          // Remove incomplete string at the end (common when response is truncated)
+          fixed = fixed.replace(/,\s*"[^"]*$/, '')
+          
+          // Try parsing the fixed version
           const parsed = JSON.parse(fixed)
           console.log('✅ Fixed and parsed JSON')
           return parsed
-        } catch (e2) {
-          // If still fails, try to extract JSON from the response
-          const jsonMatch = cleanText.match(/\{[\s\S]*\}/)
-          if (jsonMatch) {
-            try {
-              return JSON.parse(jsonMatch[0])
-            } catch (e3) {
-              console.error('All JSON parsing attempts failed')
-              throw new Error(`Failed to parse AI response. Error: ${e.message}. Please try again.`)
+        } catch (e2: any) {
+          console.error('Second parse attempt failed:', e2.message)
+          
+          // Last resort: try to extract the largest valid JSON object
+          try {
+            // Find the first { and try to find its matching }
+            let depth = 0
+            let start = cleanText.indexOf('{')
+            let end = -1
+            
+            for (let i = start; i < cleanText.length; i++) {
+              if (cleanText[i] === '{') depth++
+              if (cleanText[i] === '}') {
+                depth--
+                if (depth === 0) {
+                  end = i
+                  break
+                }
+              }
             }
+            
+            if (start !== -1 && end !== -1) {
+              const extracted = cleanText.substring(start, end + 1)
+              const parsed = JSON.parse(extracted)
+              console.log('✅ Extracted and parsed valid JSON')
+              return parsed
+            }
+          } catch (e3) {
+            console.error('All JSON parsing attempts failed')
           }
+          
           throw new Error(`Failed to parse AI response. Error: ${e.message}. Please try again.`)
         }
       }
